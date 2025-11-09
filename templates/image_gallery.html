@@ -1,0 +1,74 @@
+<!-- image_display.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bagatelle gallery</title>
+    <link rel="stylesheet" href="/static/styles/main_style.css">
+    <link rel="stylesheet" href="/static/styles/gallery_style.css">
+    <link rel="stylesheet" href="/static/js/magniview/main.css">
+    <link rel="stylesheet" href="/static/styles/chat_style.css">
+    <script type="module" src="/static/js/image_gallery.js"></script>
+</head>
+<body>
+
+<h1>Bagatelle gallery</h1>
+
+<section id="retrieval-section" aria-label="Image retrieval" class="w3-container w3-border">
+    <h3>Search for images: </h3>
+    <form id="retrieve-form" action="/retrieve" method="POST" style="display:flex; gap:8px; align-items:center;">
+        <label for="query-input" style="display:none;">Question</label>
+        <input id="query-input" name="question" type="search" placeholder="Enter your question..."
+               style="flex:1; padding:8px;" autocomplete="off" required/>
+        <label for="k-input" style="display:none;">K</label>
+        <input id="k-input" name="k" type="number" min="1" max="10" value="5"
+               style="width:80px; padding:8px;" required/>
+        <button type="submit" id="retrieve-btn" style="padding:8px 12px;">Retrieve</button>
+    </form>
+    <div id="retrieve-status" style="margin-top:8px; color:#666; font-size:90%;"></div>
+</section>
+
+<section class="w3-container w3-border">
+    <h3>You selected: </h3>
+    <div id="bagatelle-selected">
+        <div id="selected-image-container" class="image-container">
+        </div>
+    </div>
+</section>
+
+<section class="w3-container w3-border">
+    <h3>Discuss selected images with LLM: </h3>
+        <div class="chat-container box">
+            <div id="rag-chat-box" class="chat-box">
+            </div>
+            <form id="rag-chat-form" action="/ask_llm" method="POST">
+                <input type="text" id="rag-user-input" placeholder="Enter your question..." autocomplete="off">
+                <button type="submit" class="button">Send</button>
+            </form>
+        </div>
+</section>
+
+<section class="w3-block w3-border">
+    <h3>Image catalogue: </h3>
+    <div id="bagatelle-container">
+        <div id="settings-container">
+            <div id="checkbox-container" class="checkbox-wrapper-14"></div>
+            <button id="update-button" style="float: right; padding: 6px;">▼ Update</button>
+        </div>
+        <div id="image-container" class="image-container">
+        </div>
+    </div>
+</section>
+
+<!-- Back Button -->
+<a href="{{ url_for('back') }}" class="button" style="float:right;">Back</a>
+
+<script>
+    let images = {{ bagatelle_data | safe }}
+</script>
+<script src="/static/js/image_gallery.js" type="module"></script>
+
+</body>
+</html>
