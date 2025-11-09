@@ -14,8 +14,6 @@ if not (QDRANT_URL and QDRANT_API_KEY):
         "Please set it as an environment variable or in your .env file."
     )
 
-print("QDRANT key:", QDRANT_API_KEY)
-
 def get_remote_client():
     return QdrantClient(
         url=QDRANT_URL,

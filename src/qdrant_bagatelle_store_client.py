@@ -1,8 +1,9 @@
 from api.qdrant_remote_client import get_remote_client
 from api.replicate_client import get_clip_embedding
 from api.openai_client import get_llm_client
-import requests
-import os, re, base64
+import re, base64
+from pathlib import Path
+from urllib.parse import urlparse, unquote
 
 def embed_query(text):
     res = get_clip_embedding({
@@ -81,57 +82,115 @@ def query_image_and_text_collection(question, top_k=5, text_weight=0.5, image_we
     return prepare_response(question, top_k, sorted_results)
 
 
-def load_image_as_base64(path_or_url: str) -> str:
-    """
-    Loads an image from local disk OR URL and returns base64-encoded content.
-    Universal for local dev and Render deployment.
-    """
+def get_base_path():
+    """Get the base path for static files, works in both local and Render."""
+    # Try to find the static directory relative to the current file
+    current_file = Path(__file__).resolve()
+
+    # Check if static folder exists relative to current file
+    static_path = current_file.parent / "static" / "data" / "images"
+    if static_path.exists():
+        return static_path
+
+    # Check if static folder exists in the project root
+    project_root = current_file.parent
+    while project_root.parent != project_root:
+        static_path = project_root / "static" / "data" / "images"
+        if static_path.exists():
+            return static_path
+        project_root = project_root.parent
+
+    # Fallback to current working directory
+    static_path = Path.cwd() / "static" / "data" / "images"
+    if static_path.exists():
+        return static_path
+
+    raise FileNotFoundError("Could not locate static/data/images directory")
+
+
+def get_base_path() -> Path:
+    """Get the base path for static files, works in both local and Render."""
+    current_file = Path(__file__).resolve()
+
+    # Check if static folder exists relative to current file
+    static_path = current_file.parent / "static" / "data" / "images"
+    if static_path.exists():
+        return static_path
+
+    # Check if static folder exists in the project root
+    project_root = current_file.parent
+    while project_root.parent != project_root:
+        static_path = project_root / "static" / "data" / "images"
+        if static_path.exists():
+            return static_path
+        project_root = project_root.parent
+
+    # Fallback to current working directory
+    static_path = Path.cwd() / "static" / "data" / "images"
+    if static_path.exists():
+        return static_path
+
+    raise FileNotFoundError("Could not locate static/data/images directory")
+
+
+def encode_image(path: str) -> str:
+    """Encode an image file as base64."""
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+
+def extract_filename_from_path(path: str) -> str:
+    """Extract just the filename from a URL or file path."""
+    # Parse URL if it's a URL
+    parsed = urlparse(path)
+    if parsed.scheme in ('http', 'https'):
+        # Extract path from URL and decode URL encoding
+        path = unquote(parsed.path)
+
+    # Remove leading ../ or ./
+    path = re.sub(r"^\.\.?/", "", path)
     # Normalize slashes
-    clean = path_or_url.strip().replace("\\", "/")
+    path = path.replace("\\", "/")
 
-    # Local file?
-    if os.path.exists(clean):
-        with open(clean, "rb") as f:
-            return base64.b64encode(f.read()).decode("utf-8")
+    # Extract just the filename if it contains static/data/images/
+    if "static/data/images/" in path:
+        path = path.split("static/data/images/")[-1]
 
-    # URL?
-    if clean.startswith("http://") or clean.startswith("https://"):
-        resp = requests.get(clean)
-        if resp.status_code == 200:
-            return base64.b64encode(resp.content).decode("utf-8")
-        else:
-            print(f"⚠️ Warning: Could not fetch URL {clean} ({resp.status_code})")
-            return None
-
-    print(f"⚠️ Warning: Not a valid path or url: {clean}")
-    return None
+    return path
 
 
 def get_images(context_paths: str):
-    """
-    Takes a newline-separated list of paths.
-    Each may be a local file path or a URL.
-    Returns a list of base64 images.
-    """
+    base_path = get_base_path()
     image_inputs = []
 
     for line in context_paths.strip().splitlines():
-        clean = re.sub(r"^\.\./", "./", line.strip())
-        clean = clean.replace("\\", "/")
+        original_path = line.strip()
+        if not original_path:
+            continue
 
-        # Try local first → then URL fallback
-        encoded = load_image_as_base64(clean)
+        # Extract the actual filename
+        filename = extract_filename_from_path(original_path)
 
-        if encoded:
-            print(f"✅ Loaded image from {clean}")
-            image_inputs.append(encoded)
+        # Construct full path
+        full_path = base_path / filename
+
+        if full_path.exists():
+            print(f"✅ Success: Image found at {full_path}")
+            image_inputs.append(encode_image(str(full_path)))
         else:
-            print(f"❌ Failed to load image: {clean}")
+            print(f"⚠️ Warning: Image not found at {full_path}")
+            print(f"   Original path: {original_path}")
+            print(f"   Extracted filename: {filename}")
 
     return image_inputs
 
+
 def ask_llm_about_artworks(question, image_paths):
     image_inputs = get_images(image_paths)
+
+    if not image_inputs:
+        return "Error: No images could be loaded. Please check the image paths."
+
     client_llm = get_llm_client()
     resp = client_llm.chat.completions.create(
         model="gpt-5",
