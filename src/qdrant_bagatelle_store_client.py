@@ -1,6 +1,8 @@
 from api.qdrant_remote_client import get_remote_client
 from api.replicate_client import get_clip_embedding
 from api.openai_client import get_llm_client
+import requests
+import os, re, base64
 
 def embed_query(text):
     res = get_clip_embedding({
@@ -79,23 +81,53 @@ def query_image_and_text_collection(question, top_k=5, text_weight=0.5, image_we
     return prepare_response(question, top_k, sorted_results)
 
 
-import os, re, base64
+def load_image_as_base64(path_or_url: str) -> str:
+    """
+    Loads an image from local disk OR URL and returns base64-encoded content.
+    Universal for local dev and Render deployment.
+    """
+    # Normalize slashes
+    clean = path_or_url.strip().replace("\\", "/")
 
-def encode_image(path: str) -> str:
-    """Encode an image file as base64."""
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+    # Local file?
+    if os.path.exists(clean):
+        with open(clean, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+
+    # URL?
+    if clean.startswith("http://") or clean.startswith("https://"):
+        resp = requests.get(clean)
+        if resp.status_code == 200:
+            return base64.b64encode(resp.content).decode("utf-8")
+        else:
+            print(f"⚠️ Warning: Could not fetch URL {clean} ({resp.status_code})")
+            return None
+
+    print(f"⚠️ Warning: Not a valid path or url: {clean}")
+    return None
+
 
 def get_images(context_paths: str):
+    """
+    Takes a newline-separated list of paths.
+    Each may be a local file path or a URL.
+    Returns a list of base64 images.
+    """
     image_inputs = []
+
     for line in context_paths.strip().splitlines():
-        path = re.sub(r"^\.\./", "./", line.strip())
-        path = path.replace("\\", "/")
-        if os.path.exists(path):
-            print(f"✅ Success: Image found at {path}")
-            image_inputs.append(encode_image(path))
+        clean = re.sub(r"^\.\./", "./", line.strip())
+        clean = clean.replace("\\", "/")
+
+        # Try local first → then URL fallback
+        encoded = load_image_as_base64(clean)
+
+        if encoded:
+            print(f"✅ Loaded image from {clean}")
+            image_inputs.append(encoded)
         else:
-            print(f"⚠️ Warning: Image not found at {path}")
+            print(f"❌ Failed to load image: {clean}")
+
     return image_inputs
 
 def ask_llm_about_artworks(question, image_paths):
