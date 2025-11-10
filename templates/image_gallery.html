@@ -38,12 +38,23 @@
     </div>
 </section>
 
-<section class="w3-container w3-border">
+<section class="w3-container w3-border llm-block">
     <h3>Discuss selected images with LLM: </h3>
         <div class="chat-container box">
             <div id="rag-chat-box" class="chat-box">
             </div>
             <form id="rag-chat-form" action="/ask_llm" method="POST">
+                 <div class="llm-selector">
+                    <label><strong>Select LLM:</strong></label><br>
+                    <label>
+                        <input type="radio" name="llm_model" value="gpt-5" checked>
+                        gpt-5
+                    </label>
+                    <label>
+                        <input type="radio" name="llm_model" value="claude-sonnet-4">
+                        claude-sonnet-4
+                    </label>
+                </div>
                 <input type="text" id="rag-user-input" placeholder="Enter your question..." autocomplete="off">
                 <button type="submit" class="button">Send</button>
             </form>

@@ -202,6 +202,8 @@ document.getElementById("rag-chat-form").addEventListener("submit", async functi
     addMessageToRagChat("user", question);
     userInput.value = "";
 
+    const llm_model = document.querySelector('input[name="llm_model"]:checked').value;
+
     let context = [...selectedImages].join('\n');
 
     // Send the question to the Flask backend
@@ -210,7 +212,7 @@ document.getElementById("rag-chat-form").addEventListener("submit", async functi
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({question: question, context: context}),
+        body: JSON.stringify({question: question, context: context, llm: llm_model}),
     });
 
     let res = await response.text()

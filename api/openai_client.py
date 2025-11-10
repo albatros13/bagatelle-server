@@ -2,6 +2,7 @@ import os
 import base64
 from openai import OpenAI
 import logging
+from src.image_provider import get_images, encode_image
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,16 +17,9 @@ if not OPENAI_API_KEY:
 
 llm_client = OpenAI(api_key=OPENAI_API_KEY)
 
-def get_llm_client():
-    return llm_client
 
-def get_image_description_from_file(image_path, question, model="gpt-4o"):
+def get_image_description_from_file(image_path, question, model="gpt-5"):
     try:
-        # Function to encode the image
-        def encode_image(image_path):
-            with open(image_path, "rb") as image_file:
-                return base64.b64encode(image_file.read()).decode("utf-8")
-
         # Getting the base64 string
         base64_image = encode_image(image_path)
 
@@ -46,3 +40,41 @@ def get_image_description_from_file(image_path, question, model="gpt-4o"):
         return response.choices[0].message.content
     except Exception as e:
         return str(e)
+
+
+def ask_openai_llm(question, image_paths, model="gpt-5"):
+    full_paths = get_images(image_paths)
+    if not full_paths:
+        return "Error: No images could be loaded. Please check the image paths."
+
+    image_inputs = [encode_image(path) for path in full_paths]
+
+    try:
+        resp = llm_client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "You are an expert in art and medicine. Use the following images to answer:"
+                        },
+                        *[
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{image}"
+                                }
+                            }
+                            for image in image_inputs
+                        ],
+                        {"type": "text", "text": f"Question: {question}"}
+                    ]
+                }
+            ]
+        )
+        return resp.choices[0].message.content
+    except Exception as e:
+        print(f"⚠️ LLM request failed: {e}")
+        return "LLM request failed: service temporarily unavailable or timed out"

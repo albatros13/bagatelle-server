@@ -2,6 +2,9 @@ import base64
 import os
 from anthropic import Anthropic
 import logging
+from src.image_provider import get_images, encode_image_with_type
+from anthropic import APIError
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,9 +18,10 @@ if not ANTHROPIC_API_KEY:
     )
 
 # Initialize Claude client
-client = Anthropic(api_key=ANTHROPIC_API_KEY)
+llm_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
-def get_image_description_from_file(image_path, question="Describe this image", model="claude-3-5-sonnet-20241022"):
+
+def get_image_description_from_file(image_path, question="Describe this image", model="claude-sonnet-4-20250514"):
     """
     Uses Anthropic Claude 3.5 to generate a description of an image.
     """
@@ -30,7 +34,7 @@ def get_image_description_from_file(image_path, question="Describe this image", 
         base64_image = encode_image(image_path)
 
         # Claude API call with multimodal input
-        response = client.messages.create(
+        response = llm_client.messages.create(
             model=model,
             max_tokens=4000,
             messages=[
@@ -56,3 +60,49 @@ def get_image_description_from_file(image_path, question="Describe this image", 
 
     except Exception as e:
         return str(e)
+
+
+def ask_anthropic_llm(question, image_paths, model="claude-sonnet-4-20250514"):
+    full_paths = get_images(image_paths)
+    if not full_paths:
+        return "Error: No images could be loaded. Please check the image paths."
+
+    content = [
+        {"type": "text", "text": "You are an expert in art and medicine. Use the following images to answer:"},
+    ]
+
+    image_inputs = [encode_image_with_type(path) for path in full_paths]
+
+    for img in image_inputs:
+        content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": img["type"],
+                "data": img["data"],
+            },
+        })
+
+    # Add the main question
+    content.append({"type": "text", "text": f"Question: {question}"})
+
+    # Send to Claude API
+    try:
+        response = llm_client.messages.create(
+            model=model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": content}],
+        )
+
+        # Extract text blocks from response
+        return "".join(
+            block.text for block in response.content if block.type == "text"
+        )
+
+    except APIError as e:
+        print(f"⚠️ Anthropic API error: {e}")
+        return "LLM request failed due to an Anthropic API error."
+
+    except Exception as e:
+        print(f"⚠️ Unexpected error in Claude request: {e}")
+        return "LLM request failed: service temporarily unavailable or timed out."

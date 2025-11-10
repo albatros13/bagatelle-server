@@ -1,29 +1,39 @@
-body {
+.llm-block {
     font-family: Arial, sans-serif;
     background-color: #f5f5f5;
-    margin: 5%;
+    margin: 3%;
+    display: flex;
+    justify-content: center;
 }
 
 .chat-container {
-    width: 800px;
+    width: 90%;
+    max-width: 800px;
     background-color: #fff;
     border-radius: 10px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     padding: 10px;
-    margin-inline: auto;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
 }
 
+/* Scrollable chat area */
 .chat-box {
     height: 300px;
-    overflow-y: scroll;
+    overflow-y: auto;
     padding: 10px;
     border-bottom: 1px solid #ddd;
     background-color: #f9f9f9;
+    resize: vertical;
+    min-height: 150px;
 }
 
+/* Messages */
 .message {
     padding: 5px 10px;
     margin: 5px 0;
+    word-wrap: break-word;
 }
 
 .user-message {
@@ -44,8 +54,12 @@ body {
     border-radius: 5px;
 }
 
+/* Chat input area */
 form {
     display: flex;
+    flex-wrap: nowrap;
+    margin-top: 10px;
+    gap: 5px;
 }
 
 input[type="text"] {
@@ -53,13 +67,91 @@ input[type="text"] {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    font-size: 1em;
 }
 
 .button {
-    padding: 10px;
+    padding: 10px 15px;
     background-color: #41bad4;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Button hover */
+.button:hover {
+    background-color: #36a5c0;
+}
+
+/* --- Responsive breakpoints --- */
+
+/* Tablets */
+@media (max-width: 768px) {
+    .chat-container {
+        width: 95%;
+    }
+
+    .chat-box {
+        height: 250px;
+    }
+
+    input[type="text"] {
+        font-size: 0.95em;
+    }
+
+    .button {
+        font-size: 0.9em;
+        padding: 8px 12px;
+    }
+}
+
+/* Phones */
+@media (max-width: 480px) {
+    body {
+        margin: 2%;
+    }
+
+    .chat-container {
+        padding: 8px;
+        width: 100%;
+    }
+
+    .chat-box {
+        height: 220px;
+    }
+
+    form {
+        flex-direction: column;
+    }
+
+    input[type="text"],
+    .button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+.llm-selector {
+    margin-bottom: 10px;
+    font-size: 0.95em;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.llm-selector label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+@media (max-width: 480px) {
+    .llm-selector {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

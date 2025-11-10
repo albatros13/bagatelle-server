@@ -3,7 +3,9 @@ import json
 from flask import Flask, render_template, request, redirect, jsonify, session
 from datetime import timedelta
 from flask_toastr import Toastr
-from src.qdrant_bagatelle_store_client import query_image_collection, ask_llm_about_artworks
+from src.qdrant_bagatelle_store_client import query_image_collection
+from api.openai_client import ask_openai_llm
+from api.anthropic_client import ask_anthropic_llm
 import os
 import logging
 from dotenv import load_dotenv
@@ -76,12 +78,16 @@ def ask_llm():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"answer": "No JSON payload received"}), 400
-    question = data.get("question")
+    question = data.get("question", "gpt-5")
+    llm_model =  data.get("llm")
     context = data.get("context")
     print("Image context:", context)
     if question:
         try:
-            resp = ask_llm_about_artworks(question, context)
+            if llm_model == "claude-sonnet-4":
+                resp = ask_anthropic_llm(question, context)
+            else:
+                resp = ask_openai_llm(question, context)
             return jsonify({"response": resp})
         except Exception as e:
             print(e)
