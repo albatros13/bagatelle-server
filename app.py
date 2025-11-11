@@ -17,6 +17,7 @@ import re
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def create_app():
     if not os.getenv("BAGATELLE_SECRET_KEY"):
         logger.info("🔍 BAGATELLE_SECRET_KEY not found in environment — trying to load from .env")
@@ -34,8 +35,10 @@ def create_app():
     logger.info("✅ Flask app created successfully with loaded configuration.")
     return app
 
-app =create_app()
+
+app = create_app()
 toastr = Toastr(app)
+
 
 def load_bagatelle_file_list():
     file_name = os.path.join('static', 'data', 'file_list_html.csv')
@@ -72,21 +75,48 @@ Example:
     print("LLM response: ", answer)
     print("LLM filter:", answers)
     filtered = [s for s, m in zip(image_paths, answers) if "yes" in m.lower()]
-    print("Filtered set:", filtered)
     return filtered
+
 
 @app.route('/')
 def home():
+    return render_template("index.html")
+
+@app.route("/gallery")
+def gallery():
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    if not session.get("logged_in"):
+        if is_ajax:
+            return jsonify({"error": "Not logged in"}), 401
+        return redirect('/')
+    # If logged in but this is a direct navigation, redirect to home where SPA loads it properly
+    if not is_ajax:
+        return redirect('/')
     bagatelle_data = load_bagatelle_file_list()
-    return render_template('image_gallery.html', bagatelle_data=json.dumps(bagatelle_data))
+    return render_template("gallery.html",  bagatelle_data=json.dumps(bagatelle_data))
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"answer": "No JSON payload received"}), 400
+    user_pwd = data.get('password')
+    if user_pwd == "show-demo":
+        session['logged_in'] = True
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Invalid password"}), 401
 
 @app.route('/retrieve', methods=['POST'])
 def retrieve():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No JSON payload received"}), 400
-    question = data.get("question")
+
     llm_model = data.get("llm")
+    if llm_model and not session.get("logged_in"):
+        return jsonify({"error": "Not logged in"}), 401
+
+    question = data.get("question")
     try:
         top_k = int(data.get("k", 3))
     except (TypeError, ValueError):
@@ -105,8 +135,11 @@ def retrieve():
             return jsonify({"response": image_paths, "error": "Model failed to run!"})
     return jsonify({"response": image_paths, "error": "Invalid request!"})
 
+
 @app.route('/ask_llm', methods=['POST'])
 def ask_llm():
+    if not session.get("logged_in"):
+        return jsonify({"error": "Not logged in"}), 401
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"answer": "No JSON payload received"}), 400
@@ -128,6 +161,12 @@ def ask_llm():
     else:
         return jsonify({"response": "No question received"}), 400
 
+
+@app.route('/session')
+def session_status():
+    """Return JSON with current login status."""
+    return jsonify({"logged_in": bool(session.get("logged_in"))})
+
 @app.route('/back')
 def back():
     """
@@ -140,4 +179,4 @@ def back():
 if __name__ == '__main__':
     app.run()
     app.app_context().push()
-    # session.pop('logged_in', None)
+    session.pop('logged_in', None)

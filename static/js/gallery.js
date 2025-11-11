@@ -27,8 +27,6 @@ function updateSelected(selectedImages, updateCheckboxes = true) {
     const selectedContainer = document.getElementById("selected-image-container");
     selectedContainer.innerHTML = "";
 
-    console.log("Selected: ", selectedImages);
-
     [...selectedImages].forEach(fileName => {
         const src = getImagePath(fileName);
         const link = fileName.replace(/\.[^/.]+$/, ".html");
@@ -45,7 +43,7 @@ function updateSelected(selectedImages, updateCheckboxes = true) {
 }
 
 
-function getImagePath(fileName){
+function getImagePath(fileName) {
     return "./static/data/images/" + fileName;
 }
 
@@ -199,6 +197,34 @@ function addMessageToRagChat(sender, message) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+async function login() {
+    const passwordInput = document.getElementById("password");
+    const errorMsg = document.getElementById("error-msg");
+    const loginContainer = document.getElementById("login-container");
+
+    const password = passwordInput.value;
+
+    try {
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({password})
+        });
+
+        const result = await response.json();
+        console.log(result);
+        if (result.success) {
+            loginContainer.style.display = "none";
+        } else {
+            errorMsg.textContent = result.error || "Login failed";
+        }
+
+    } catch (err) {
+        errorMsg.textContent = "Server error";
+        console.error(err);
+    }
+}
+
 // Submit request to the server to retrieve images
 async function submitSearchRequest(ev) {
     ev.preventDefault();
@@ -216,7 +242,6 @@ async function submitSearchRequest(ev) {
     if (llm_options) {
         llm_model = document.querySelector('input[name="llm_refine_choice"]:checked').value;
     }
-    console.log("LLM for refinement:", llm_model)
 
     // Display loading status
     retrieveStatus.textContent = `Retrieving top ${k} images...`;
@@ -289,7 +314,6 @@ async function submitLLMQuestion(event) {
     }
 }
 
-
 // Global definitions and controls
 
 const retrieveStatus = document.getElementById('retrieve-status');
@@ -304,6 +328,7 @@ document.getElementById('retrieve-form').addEventListener('submit', submitSearch
 document.getElementById("rag-chat-form").addEventListener("submit", submitLLMQuestion);
 document.getElementById("settings-container").style.marginRight = "20px";
 document.getElementById("settings-container").style.minWidth = "300px";
+
 
 // Initial setup
 loadCategories();

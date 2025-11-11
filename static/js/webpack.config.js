@@ -4,9 +4,9 @@ const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 
 module.exports = {
     mode: 'production',
-    entry: './src/image_gallery.js',
+    entry: './src/index.js',
     output: {
-        filename: 'image_gallery-min.js',
+        filename: 'index-min.js',
         path: path.resolve(__dirname, 'dist'),
     },
     module: {
