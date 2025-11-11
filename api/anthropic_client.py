@@ -62,13 +62,13 @@ def get_image_description_from_file(image_path, question="Describe this image", 
         return str(e)
 
 
-def ask_anthropic_llm(question, image_paths, model="claude-sonnet-4-20250514"):
+def ask_anthropic_llm(question, image_paths, prompt, model="claude-sonnet-4-20250514"):
     full_paths = get_images(image_paths)
     if not full_paths:
         return "Error: No images could be loaded. Please check the image paths."
 
     content = [
-        {"type": "text", "text": "You are an expert in art and medicine. Use the following images to answer:"},
+        {"type": "text", "text": prompt},
     ]
 
     image_inputs = [encode_image_with_type(path) for path in full_paths]

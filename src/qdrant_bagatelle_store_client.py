@@ -48,8 +48,6 @@ def prepare_response(question, top_k, sorted_results):
     return response
 
 
-# Export
-
 def query_image_collection(question, top_k=5):
     image_results = search_image_collection(question, top_k=top_k)
     image_map = {}

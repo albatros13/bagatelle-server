@@ -9,6 +9,7 @@ from api.anthropic_client import ask_anthropic_llm
 import os
 import logging
 from dotenv import load_dotenv
+import re
 
 # log = logging.getLogger('werkzeug')
 # log.setLevel(logging.ERROR)
@@ -46,6 +47,34 @@ def load_bagatelle_file_list():
             images.append({"name": row[0], "category": row[1], "link": row[2]})
     return images
 
+
+def refine_response(question, image_paths, llm_model):
+    if not image_paths or len(image_paths) == 0:
+        return image_paths
+    if len(image_paths) > 10:
+        print("Cannot process more than 10 images!")
+        return image_paths
+
+    prompt = f"""
+You are an expert image analyst. Examine each of the following {len(image_paths)} images and determine 
+whether it match the search query. Answer strictly with a JSON array of "Yes" or "No" values, one per image, 
+in the same order as given.
+Example:
+["No", "Yes", "No"]    
+    """
+    if llm_model == "gpt-5":
+        answer = ask_openai_llm(question, image_paths, prompt)
+    else:
+        # Default LLM - claude-sonnet-4-20250514
+        answer = ask_anthropic_llm(question, image_paths, prompt)
+
+    answers = re.findall(r"\b(?:Image\s*\d+\s*[:\-]?\s*)?(Yes|No)\b", answer, flags=re.IGNORECASE)
+    print("LLM response: ", answer)
+    print("LLM filter:", answers)
+    filtered = [s for s, m in zip(image_paths, answers) if "yes" in m.lower()]
+    print("Filtered set:", filtered)
+    return filtered
+
 @app.route('/')
 def home():
     bagatelle_data = load_bagatelle_file_list()
@@ -57,21 +86,24 @@ def retrieve():
     if not data:
         return jsonify({"error": "No JSON payload received"}), 400
     question = data.get("question")
+    llm_model = data.get("llm")
     try:
         top_k = int(data.get("k", 3))
     except (TypeError, ValueError):
         top_k = 3
 
-    response = []
+    image_paths = []
     if question:
         try:
-            response = query_image_collection(question, top_k)
+            image_paths = query_image_collection(question, top_k)
             # response = query_image_and_text_collection(question, top_k)
-            return jsonify({"response": response})
+            if llm_model:
+                image_paths = refine_response(question, image_paths, llm_model)
+            return jsonify({"response": image_paths})
         except Exception as e:
             print(e)
-            return jsonify({"response": response, "error": "Model failed to run!"})
-    return jsonify({"response": response, "error": "Invalid request!"})
+            return jsonify({"response": image_paths, "error": "Model failed to run!"})
+    return jsonify({"response": image_paths, "error": "Invalid request!"})
 
 @app.route('/ask_llm', methods=['POST'])
 def ask_llm():
@@ -79,15 +111,16 @@ def ask_llm():
     if not data:
         return jsonify({"answer": "No JSON payload received"}), 400
     question = data.get("question", "gpt-5")
-    llm_model =  data.get("llm")
+    llm_model = data.get("llm")
     context = data.get("context")
-    print("Image context:", context)
     if question:
         try:
-            if llm_model == "claude-sonnet-4":
-                resp = ask_anthropic_llm(question, context)
+            prompt = "You are an expert in art and medicine. Use the following images to answer:"
+            context_paths = context.strip().splitlines()
+            if llm_model == "gpt-5":
+                resp = ask_openai_llm(question, context_paths, prompt)
             else:
-                resp = ask_openai_llm(question, context)
+                resp = ask_anthropic_llm(question, context_paths, prompt)
             return jsonify({"response": resp})
         except Exception as e:
             print(e)

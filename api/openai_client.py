@@ -1,5 +1,4 @@
 import os
-import base64
 from openai import OpenAI
 import logging
 from src.image_provider import get_images, encode_image
@@ -42,7 +41,7 @@ def get_image_description_from_file(image_path, question, model="gpt-5"):
         return str(e)
 
 
-def ask_openai_llm(question, image_paths, model="gpt-5"):
+def ask_openai_llm(question, image_paths, prompt, model="gpt-5"):
     full_paths = get_images(image_paths)
     if not full_paths:
         return "Error: No images could be loaded. Please check the image paths."
@@ -58,7 +57,7 @@ def ask_openai_llm(question, image_paths, model="gpt-5"):
                     "content": [
                         {
                             "type": "text",
-                            "text": "You are an expert in art and medicine. Use the following images to answer:"
+                            "text": prompt
                         },
                         *[
                             {

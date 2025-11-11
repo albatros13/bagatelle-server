@@ -22,30 +22,43 @@ function updateImages() {
     }));
 }
 
-function updateSelected(selectedImages) {
+// Update visual block with selected images
+function updateSelected(selectedImages, updateCheckboxes = true) {
     const selectedContainer = document.getElementById("selected-image-container");
     selectedContainer.innerHTML = "";
-    [...selectedImages].forEach((imageSrc) => {
-        const label = imageSrc.replace(/^.*[\\/]/, '');
-        const link = imageSrc.replace(/^.*[\\/]/, "").replace(/\.[^/.]+$/, ".html");
-        let thumbnailFigure = createThumbnailFigure(imageSrc, label, link);
+
+    console.log("Selected: ", selectedImages);
+
+    [...selectedImages].forEach(fileName => {
+        const src = getImagePath(fileName);
+        const link = fileName.replace(/\.[^/.]+$/, ".html");
+        let thumbnailFigure = createThumbnailFigure(src, fileName, link);
         selectedContainer.appendChild(thumbnailFigure);
+
+        //Sync checkboxes
+        if (updateCheckboxes) {
+            const chbName = getCheckboxName(src);
+            const checkboxes = document.querySelectorAll(`input[type="checkbox"][name=${chbName}`);
+            checkboxes.forEach(c => c.checked = true);
+        }
     });
 }
 
-function toggleImageSelection(event) {
-    event.preventDefault();
-    const checkbox = event.target;
-    const imageSrc = checkbox.parentElement.querySelector('img').src;
 
-    if (checkbox.checked) {
-        selectedImages.add(imageSrc);
-    } else {
-        selectedImages.delete(imageSrc);
-    }
-    updateSelected(selectedImages);
+function getImagePath(fileName){
+    return "./static/data/images/" + fileName;
 }
 
+function getFileName(src) {
+    const parts = src.split(/[\\/]/);
+    return parts[parts.length - 1];
+}
+
+function getCheckboxName(src) {
+    return "chb_" + getFileName(src).replace(/[^a-zA-Z0-9]/g, "_");
+}
+
+// Create a link for image caption
 function createLink(folder, filename, label) {
     let link = document.createElement("a");
     link.href = folder + filename;
@@ -54,11 +67,13 @@ function createLink(folder, filename, label) {
     return link;
 }
 
+// Create a figure to show image and associated information
 function createThumbnailFigure(src, label, link) {
+    const maxLength = 30;
     const thumbnail = document.createElement("img");
     thumbnail.src = src;
     thumbnail.classList.add("thumbnail");
-    thumbnail.title = thumbnail.src.replace(/^.*[\\/]/, '');
+    thumbnail.title = getFileName(src);
     //Figure
     const thumbnailFigure = document.createElement("figure")
     const thumbnailCaption = document.createElement("figcaption")
@@ -70,7 +85,7 @@ function createThumbnailFigure(src, label, link) {
     linksContainer.appendChild(createLink("./static/data/html_gpt-5/", link, "GPT-5"));
 
     const labelElem = document.createElement("div");
-    labelElem.innerText = label;
+    labelElem.innerText = label.length > maxLength ? label.slice(0, maxLength - 1) + "…" : label;
     labelElem.classList.add("imageLabel");
 
     thumbnailCaption.appendChild(labelElem);
@@ -80,9 +95,40 @@ function createThumbnailFigure(src, label, link) {
     thumbnailFigure.appendChild(thumbnailCaption);
     //thumbnailFigure.setAttribute("data-gallery", "bagatelle");
     thumbnailFigure.setAttribute("data-magniview", "bagatelle");
+
+    //Checkbox
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.classList.add(`imageCheckbox`)
+    checkbox.name = getCheckboxName(src);
+    thumbnailFigure.appendChild(checkbox);
+    checkbox.addEventListener('change', toggleImageSelection);
+
+    checkbox.checked = selectedImages.has(getFileName(src));
+
     return thumbnailFigure;
 }
 
+// Add/remove image from selected list on checkbox toggle
+function toggleImageSelection(event) {
+    event.preventDefault();
+    const checkbox = event.target;
+    const src = checkbox.parentElement.querySelector('img').src;
+    const fileName = getFileName(src)
+
+    const isChecked = checkbox.checked;
+    if (isChecked) {
+        selectedImages.add(fileName);
+    } else {
+        selectedImages.delete(fileName);
+    }
+    const chbName = getCheckboxName(src);
+    const checkboxes = document.querySelectorAll(`input[type="checkbox"][name=${chbName}`);
+    checkboxes.forEach(c => c.checked = isChecked);
+    updateSelected(selectedImages, false);
+}
+
+// Load images into catalogue
 function displayImages(images) {
     const imageContainer = document.getElementById("image-container");
     imageContainer.innerHTML = "";
@@ -94,56 +140,67 @@ function displayImages(images) {
         let thumbnailFigure = createThumbnailFigure(
             'static/data/images/' + image.name, label, image.link);
         imageContainer.appendChild(thumbnailFigure);
-        //Checkbox
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.addEventListener('change', toggleImageSelection);
-        checkbox.classList.add(`imageCheckbox`)
-        thumbnailFigure.appendChild(checkbox);
     });
 }
 
-// Definitions
-
-// Attach submit handler for the retrieval form
-const form = document.getElementById('retrieve-form');
-const statusEl = document.getElementById('retrieve-status');
-
-const categories = Array.from(new Set(images.map(img => img["category"]))).sort();
-const categoryAcronyms = {};
-let prevNum = 0;
-let prevLetter = "";
-categories.forEach(category => {
-    let a = category[0]
-    if (a === prevLetter) {
-        prevNum += 1;
-    } else {
-        prevLetter = a;
-        prevNum = 1;
+// Toggle rado group for LLM refined search
+function updateLlmRadios(e) {
+    let enabled = e.target.checked;
+    // Prefer a wrapper element if present
+    const wrapper = document.getElementById('llm-options');
+    if (wrapper) {
+        const radios = wrapper.querySelectorAll('input[type="radio"]');
+        radios.forEach(r => {
+            r.disabled = !enabled;
+            if (!enabled) r.checked = false;
+        });
+        if (radios.length > 0 && enabled) {
+            radios[0].checked = true;
+        }
     }
-    categoryAcronyms[category] = a + prevNum;
-});
-const checkboxContainer = document.getElementById("checkbox-container");
-categories.forEach(category => {
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = category;
-    label.appendChild(checkbox);
-    const count = images.filter(image => image.category === category).length;
-    label.appendChild(document.createTextNode(category + " (" + categoryAcronyms[category] + ") - " + count));
-    checkboxContainer.appendChild(label);
-    checkboxContainer.appendChild(document.createElement("br"));
-});
+}
 
-document.addEventListener('DOMContentLoaded', initializeMagniview);
-document.getElementById("update-button").addEventListener("click", updateImages);
-document.getElementById("settings-container").style.marginRight = "20px";
-document.getElementById("settings-container").style.minWidth = "300px";
+// Populate category selection panel
+function loadCategories() {
+    let prevNum = 0;
+    let prevLetter = "";
+    categories.forEach(category => {
+        let a = category[0]
+        if (a === prevLetter) {
+            prevNum += 1;
+        } else {
+            prevLetter = a;
+            prevNum = 1;
+        }
+        categoryAcronyms[category] = a + prevNum;
+    });
+    const checkboxContainer = document.getElementById("checkbox-container");
+    categories.forEach(category => {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = category;
+        label.appendChild(checkbox);
+        const count = images.filter(image => image.category === category).length;
+        label.appendChild(document.createTextNode(category + " (" + categoryAcronyms[category] + ") - " + count));
+        checkboxContainer.appendChild(label);
+        checkboxContainer.appendChild(document.createElement("br"));
+    });
+}
 
-let selectedImages = new Set();
+// Add message to the chat box
+function addMessageToRagChat(sender, message) {
+    const chatBox = document.getElementById("rag-chat-box");
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("message");
+    messageElement.classList.add(`${sender}-message`);
+    messageElement.textContent = message;
+    chatBox.appendChild(messageElement);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-form.addEventListener('submit', async function (ev) {
+// Submit request to the server to retrieve images
+async function submitSearchRequest(ev) {
     ev.preventDefault();
     const question = document.getElementById('query-input').value.trim();
     let k = parseInt(document.getElementById('k-input').value, 10);
@@ -154,8 +211,15 @@ form.addEventListener('submit', async function (ev) {
     if (Number.isNaN(k)) k = 1;
     k = Math.max(1, Math.min(10, k));
 
+    let llm_model = null
+    const llm_options = document.querySelector('input[name="llm_refine_choice"]:checked');
+    if (llm_options) {
+        llm_model = document.querySelector('input[name="llm_refine_choice"]:checked').value;
+    }
+    console.log("LLM for refinement:", llm_model)
+
     // Display loading status
-    statusEl.textContent = `Retrieving top ${k} images...`;
+    retrieveStatus.textContent = `Retrieving top ${k} images...`;
     const btn = document.getElementById('retrieve-btn');
     btn.disabled = true;
 
@@ -167,7 +231,7 @@ form.addEventListener('submit', async function (ev) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({question: question, k: k})
+            body: JSON.stringify({question: question, k: k, llm: llm_model})
         });
 
         if (!resp.ok) {
@@ -180,20 +244,21 @@ form.addEventListener('submit', async function (ev) {
             throw new Error('Server response is not a JSON array of image URLs/paths.');
         }
 
-        selectedImages = new Set(data);
+        selectedImages = new Set(data.map(x => getFileName(x)));
         updateSelected(selectedImages);
 
-        statusEl.textContent = `Retrieved ${data.length} images.`;
+        retrieveStatus.textContent = `Retrieved ${data.length} images.`;
     } catch (err) {
         console.error(err);
-        statusEl.textContent = `Error retrieving images: ${err.message || err}`;
+        retrieveStatus.textContent = `Error retrieving images: ${err.message || err}`;
         alert("Failed to retrieve images. See console for details.");
     } finally {
         btn.disabled = false;
     }
-});
+}
 
-document.getElementById("rag-chat-form").addEventListener("submit", async function (event) {
+// Submit a question to a selected LLM about selected images
+async function submitLLMQuestion(event) {
     event.preventDefault();
 
     const userInput = document.getElementById("rag-user-input");
@@ -204,7 +269,7 @@ document.getElementById("rag-chat-form").addEventListener("submit", async functi
 
     const llm_model = document.querySelector('input[name="llm_model"]:checked').value;
 
-    let context = [...selectedImages].join('\n');
+    let context = [...selectedImages].map(x => getImagePath(x)).join('\n');
 
     // Send the question to the Flask backend
     const response = await fetch("/ask_llm", {
@@ -222,19 +287,25 @@ document.getElementById("rag-chat-form").addEventListener("submit", async functi
     } catch (error) {
         addMessageToRagChat("system", res);
     }
-});
-
-// Function to add message to the chat box
-function addMessageToRagChat(sender, message) {
-    const chatBox = document.getElementById("rag-chat-box");
-    const messageElement = document.createElement("div");
-    messageElement.classList.add("message");
-    messageElement.classList.add(`${sender}-message`);
-    messageElement.textContent = message;
-    chatBox.appendChild(messageElement);
-    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Initial display of all images
+
+// Global definitions and controls
+
+const retrieveStatus = document.getElementById('retrieve-status');
+const categories = Array.from(new Set(images.map(img => img["category"]))).sort();
+const categoryAcronyms = {};
+let selectedImages = new Set();
+
+document.addEventListener('DOMContentLoaded', initializeMagniview);
+document.getElementById('llm-checkbox').addEventListener('change', updateLlmRadios);
+document.getElementById("update-button").addEventListener("click", updateImages);
+document.getElementById('retrieve-form').addEventListener('submit', submitSearchRequest);
+document.getElementById("rag-chat-form").addEventListener("submit", submitLLMQuestion);
+document.getElementById("settings-container").style.marginRight = "20px";
+document.getElementById("settings-container").style.minWidth = "300px";
+
+// Initial setup
+loadCategories();
 displayImages(images);
 

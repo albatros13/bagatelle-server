@@ -41,7 +41,6 @@ def get_base_path():
 
     raise FileNotFoundError("Could not locate static/data/images directory")
 
-
 def extract_filename_from_path(path):
     """Extract just the filename from a URL or file path."""
     # Parse URL if it's a URL
@@ -66,7 +65,7 @@ def get_images(context_paths: str):
     base_path = get_base_path()
     image_inputs = []
 
-    for line in context_paths.strip().splitlines():
+    for line in context_paths:
         original_path = line.strip()
         if not original_path:
             continue
