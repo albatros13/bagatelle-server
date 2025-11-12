@@ -197,6 +197,19 @@ function addMessageToRagChat(sender, message) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+function sliderControl(ev){
+  const sliderValue = document.getElementById('sliderValue');
+  const parsedFloatEl = document.getElementById('parsedFloat');
+  const intRepEl = document.getElementById('intRep');
+
+  const raw = ev.target.value;
+  sliderValue.textContent = raw;
+  const v = parseFloat(raw);
+  parsedFloatEl.textContent = v.toFixed(1);
+  intRepEl.textContent = Math.round(v * 10);
+}
+
+// Submit password to get access to gallery
 async function login() {
     const passwordInput = document.getElementById("password");
     const errorMsg = document.getElementById("error-msg");
@@ -228,20 +241,24 @@ async function login() {
 // Submit request to the server to retrieve images
 async function submitSearchRequest(ev) {
     ev.preventDefault();
+    // Search query
     const question = document.getElementById('query-input').value.trim();
-    let k = parseInt(document.getElementById('k-input').value, 10);
     if (!question) {
         alert("Please enter a question.");
         return;
     }
+    // Top K images to extract
+    let k = parseInt(document.getElementById('k-input').value, 10);
     if (Number.isNaN(k)) k = 1;
     k = Math.max(1, Math.min(10, k));
-
-    let llm_model = null
-    const llm_options = document.querySelector('input[name="llm_refine_choice"]:checked');
-    if (llm_options) {
-        llm_model = document.querySelector('input[name="llm_refine_choice"]:checked').value;
+    // LLM version to cross-check image relevance
+    let llmModel = null
+    const llmOptions = document.querySelector('input[name="llm_refine_choice"]:checked');
+    if (llmOptions) {
+        llmModel = document.querySelector('input[name="llm_refine_choice"]:checked').value;
     }
+    // Weight of visual vs textual data for search
+    const rawWeight = document.getElementById('slider').value;
 
     // Display loading status
     retrieveStatus.textContent = `Retrieving top ${k} images...`;
@@ -256,7 +273,7 @@ async function submitSearchRequest(ev) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({question: question, k: k, llm: llm_model})
+            body: JSON.stringify({question: question, k: k, llm: llmModel, weight: rawWeight})
         });
 
         if (!resp.ok) {
@@ -326,8 +343,11 @@ document.getElementById('llm-checkbox').addEventListener('change', updateLlmRadi
 document.getElementById("update-button").addEventListener("click", updateImages);
 document.getElementById('retrieve-form').addEventListener('submit', submitSearchRequest);
 document.getElementById("rag-chat-form").addEventListener("submit", submitLLMQuestion);
-document.getElementById("settings-container").style.marginRight = "20px";
-document.getElementById("settings-container").style.minWidth = "300px";
+document.getElementById('slider').addEventListener('input', sliderControl);
+
+const settingContainer = document.getElementById("settings-container");
+settingContainer.style.marginRight = "20px";
+settingContainer.style.minWidth = "300px";
 
 
 // Initial setup

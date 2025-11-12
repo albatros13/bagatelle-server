@@ -3,11 +3,19 @@
 <section id="retrieval-section" aria-label="Image retrieval" class="w3-container w3-border">
     <h3>Search for images: </h3>
     <form id="retrieve-form" action="/retrieve" method="POST" style="display:flex; gap:8px; align-items:center;">
-        <!-- LLM refine search checkbox + radio options -->
+         <!-- Slider to set percentage of visual vs textual data -->
+        <div class="slider-container">
+            <div class="slider-row">
+              <label for="slider">Write-ups weight:</label>
+              <input id="slider" type="range" min="0" max="1" step="0.1" value="0" />
+              <span id="sliderValue" class="slider-value">0.5</span>
+            </div>
+        </div>
+         <!-- LLM refine search checkbox + radio options -->
         <div id="llm-refine-wrapper" style="display:flex; align-items:center; gap:12px; margin-left:8px;">
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
                 <input type="checkbox" id="llm-checkbox" name="use_llm_refine" checked/>
-                <span>Use LLM to refined search</span>
+                <span>Use LLM to refine search</span>
             </label>
             <div id="llm-options" style="display:flex; align-items:center; gap:8px;">
                 <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">

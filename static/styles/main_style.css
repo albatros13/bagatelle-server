@@ -92,3 +92,7 @@ body {
 .row2 {
     flex: 1; /* Takes the remaining 80% */
 }
+
+.slider-container { max-width: 480px; margin: 0 auto; }
+.slider-value { font-weight: 700; margin-left: .5rem; }
+.slider-row { display:flex; align-items:center; gap: .5rem; margin: .75rem 0; }

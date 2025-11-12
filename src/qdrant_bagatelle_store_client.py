@@ -38,40 +38,65 @@ def search_text_collection(question, top_k):
 
 
 def prepare_response(question, top_k, sorted_results):
-    results = [r["point"] for r in sorted_results[:top_k]]
+    selected = sorted_results[:top_k]
     response = []
     print(f"\nTop {top_k} results for query: '{question}'\n")
-    for i, r in enumerate(results, start=1):
-        image_path = r.payload.get("image_path", "N/A")
-        print(f"{i}. [Score: {r.score:.4f}] ({image_path})")
+    for i, item in enumerate(selected, start=1):
+        point = item.get("point")
+        # Normalize: point may be a single result or a list of results
+        if isinstance(point, list):
+            first_point = point[0] if point else None
+        else:
+            first_point = point
+        image_path = first_point.payload.get("image_path", "N/A") if first_point else "N/A"
+        score = item.get("score", getattr(first_point, "score", float("nan")))
+        print(f"{i}. [Score: {score:.4f}] ({image_path})")
         response.append(image_path)
     return response
 
 
 def query_image_collection(question, top_k=5):
     image_results = search_image_collection(question, top_k=top_k)
-    image_map = {}
+    image_list = []
     for r in image_results:
-        img_path = r.payload.get("image_path", "N/A")
-        image_map[img_path] = {"point": r, "score": r.score}
-    sorted_results = sorted(image_map.values(), key=lambda x: x["score"], reverse=True)
+        image_list.append({"point": r, "score": r.score})
+    sorted_results = sorted(image_list, key=lambda x: x["score"], reverse=True)
     return prepare_response(question, top_k, sorted_results)
 
 
-def query_image_and_text_collection(question, top_k=5, text_weight=0.5, image_weight=0.5):
-    image_results = search_image_collection(question, top_k)
-    text_results = search_text_collection(question, top_k)
+def query_text_collection(question, top_k=5):
+    OVERHIT = 5
+    text_results = search_text_collection(question, top_k * OVERHIT)
 
     combined = {}
     for r in text_results:
         img_path = r.payload.get("image_path", "N/A")
-        combined[img_path] = {"point": r, "score": r.score * text_weight}
+        if img_path in combined:
+            combined[img_path]["score"] += r.score
+            combined[img_path]["point"].append(r)
+        else:
+            combined[img_path] = {"point": [r], "score": r.score}
 
+    sorted_results = sorted(combined.values(), key=lambda x: x["score"], reverse=True)
+    return prepare_response(question, top_k, sorted_results)
+
+
+def query_image_and_text_collection(question, top_k=5, text_weight=0.5, image_weight=0.5):
+    OVERHIT = 5
+    image_results = search_image_collection(question, top_k)
+    text_results = search_text_collection(question, top_k * OVERHIT)
+
+    combined = {}
     for r in image_results:
+        img_path = r.payload.get("image_path", "N/A")
+        combined[img_path] = {"point": [r], "score": r.score * text_weight}
+
+    for r in text_results:
         img_path = r.payload.get("image_path", "N/A")
         if img_path in combined:
             combined[img_path]["score"] += r.score * image_weight
+            combined[img_path]["point"].append(r)
         else:
-            combined[img_path] = {"point": r, "score": r.score * image_weight}
+            combined[img_path] = {"point": [r], "score": r.score * image_weight}
     sorted_results = sorted(combined.values(), key=lambda x: x["score"], reverse=True)
     return prepare_response(question, top_k, sorted_results)

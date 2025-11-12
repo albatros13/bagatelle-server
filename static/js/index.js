@@ -2,15 +2,12 @@ function executeScripts(container) {
     const scripts = Array.from(container.querySelectorAll('script'));
     scripts.forEach(oldScript => {
         const newScript = document.createElement('script');
-        // Copy attributes
         for (const {name, value} of Array.from(oldScript.attributes)) {
             newScript.setAttribute(name, value);
         }
-        // Inline script content
         if (!oldScript.src) {
             newScript.textContent = oldScript.textContent;
         }
-        // Replace old with new so it executes
         oldScript.parentNode.replaceChild(newScript, oldScript);
     });
 }

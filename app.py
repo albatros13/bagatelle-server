@@ -3,7 +3,8 @@ import json
 from flask import Flask, render_template, request, redirect, jsonify, session
 from datetime import timedelta
 from flask_toastr import Toastr
-from src.qdrant_bagatelle_store_client import query_image_collection
+from src.qdrant_bagatelle_store_client import (
+    query_image_collection, query_text_collection, query_image_and_text_collection)
 from api.openai_client import ask_openai_llm
 from api.anthropic_client import ask_anthropic_llm
 import os
@@ -112,21 +113,39 @@ def retrieve():
     if not data:
         return jsonify({"error": "No JSON payload received"}), 400
 
+    # Selected LLM for refinement
     llm_model = data.get("llm")
     if llm_model and not session.get("logged_in"):
         return jsonify({"error": "Not logged in"}), 401
 
+    # Search query
     question = data.get("question")
+
+    # Number of images to retrieve
     try:
         top_k = int(data.get("k", 3))
     except (TypeError, ValueError):
         top_k = 3
 
+    raw_weight = data.get("weight")
+    try:
+        weight = float(raw_weight)
+    except ValueError:
+        weight = 0
+
     image_paths = []
     if question:
         try:
-            image_paths = query_image_collection(question, top_k)
-            # response = query_image_and_text_collection(question, top_k)
+            if weight > 0:
+                if weight == 1:
+                    logger.info("Text search")
+                    image_paths = query_text_collection(question, top_k)
+                else:
+                    logger.info("Combined image and text search: ", weight)
+                    image_paths = query_image_and_text_collection(question, top_k, weight, 1 - weight)
+            else:
+                logger.info("Image search")
+                image_paths = query_image_collection(question, top_k)
             if llm_model:
                 image_paths = refine_response(question, image_paths, llm_model)
             return jsonify({"response": image_paths})

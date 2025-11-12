@@ -4,7 +4,6 @@ from PIL import Image
 from sentence_transformers import SentenceTransformer
 from qdrant_client.http.models import PointStruct
 from api.qdrant_remote_client import get_remote_client
-from textwrap import wrap
 
 # ---------------- CONFIG ----------------
 DATA_FILE = "data/artwork_names_filtered.csv"
