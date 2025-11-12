@@ -14,12 +14,6 @@ function updateImages() {
     selectedImages = new Set();
     const selectedContainer = document.getElementById("selected-image-container");
     selectedContainer.innerHTML = "";
-
-    // Magniview is initialized on DOMContentLoaded, trigger it to update the gallery
-    window.document.dispatchEvent(new Event("DOMContentLoaded", {
-        bubbles: true,
-        cancelable: true
-    }));
 }
 
 // Update visual block with selected images
@@ -91,7 +85,6 @@ function createThumbnailFigure(src, label, link) {
 
     thumbnailFigure.appendChild(thumbnail);
     thumbnailFigure.appendChild(thumbnailCaption);
-    //thumbnailFigure.setAttribute("data-gallery", "bagatelle");
     thumbnailFigure.setAttribute("data-magniview", "bagatelle");
 
     //Checkbox
@@ -139,6 +132,11 @@ function displayImages(images) {
             'static/data/images/' + image.name, label, image.link);
         imageContainer.appendChild(thumbnailFigure);
     });
+    try {
+        initializeMagniview();
+    } catch (e) {
+        console.warn("Magniview re-initialization failed:", e);
+    }
 }
 
 // Toggle rado group for LLM refined search
@@ -338,7 +336,6 @@ const categories = Array.from(new Set(images.map(img => img["category"]))).sort(
 const categoryAcronyms = {};
 let selectedImages = new Set();
 
-document.addEventListener('DOMContentLoaded', initializeMagniview);
 document.getElementById('llm-checkbox').addEventListener('change', updateLlmRadios);
 document.getElementById("update-button").addEventListener("click", updateImages);
 document.getElementById('retrieve-form').addEventListener('submit', submitSearchRequest);
@@ -348,7 +345,6 @@ document.getElementById('slider').addEventListener('input', sliderControl);
 const settingContainer = document.getElementById("settings-container");
 settingContainer.style.marginRight = "20px";
 settingContainer.style.minWidth = "300px";
-
 
 // Initial setup
 loadCategories();

@@ -7,13 +7,13 @@ let currentImageIndex = 0;
 let currentGalleryItems = [];
 export const controls = {}; 
 
-document.addEventListener('DOMContentLoaded', () => {
+export function loadImages(){
   body = document.querySelector('body');
   magniviewItems = document.querySelectorAll('[data-magniview]');
-  
   createMagniviewHTML();
   cacheControls();
-});
+}
+
 export function setMagniviewImagesBox(value) {
   magniviewImagesBox = value;
 }
