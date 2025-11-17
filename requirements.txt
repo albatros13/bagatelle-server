@@ -15,4 +15,4 @@ flask_toastr
 replicate
 anthropic
 dotenv
-qdrant-client>=1.8.0
+qdrant-client==1.15.1
