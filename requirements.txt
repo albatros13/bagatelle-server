@@ -12,7 +12,7 @@ packaging
 python-dateutil
 pytz
 flask_toastr
-qdrant-client
 replicate
 anthropic
 dotenv
+qdrant-client>=1.8.0
