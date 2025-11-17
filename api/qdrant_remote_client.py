@@ -1,12 +1,12 @@
 import os
 from qdrant_client import QdrantClient
 import logging
+from importlib.metadata import version
+
+print("Qdrant client version:", version("qdrant-client"))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-print(f"Qdrant client version: {QdrantClient.__version__}")
-logger.info(f"Qdrant client version: {QdrantClient.__version__}")
 
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
