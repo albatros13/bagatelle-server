@@ -142,13 +142,6 @@ input[type="text"] {
     gap: 10px;
 }
 
-.llm-selector label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-}
-
 @media (max-width: 480px) {
     .llm-selector {
         flex-direction: column;

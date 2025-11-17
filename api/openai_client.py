@@ -51,6 +51,7 @@ def ask_openai_llm(question, image_paths, prompt, model="gpt-5"):
     try:
         resp = llm_client.chat.completions.create(
             model=model,
+            timeout=120,
             messages=[
                 {
                     "role": "user",

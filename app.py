@@ -155,31 +155,76 @@ def retrieve():
     return jsonify({"response": image_paths, "error": "Invalid request!"})
 
 
-@app.route('/ask_llm', methods=['POST'])
-def ask_llm():
+# @app.route('/ask_llm', methods=['POST'])
+# def ask_llm():
+#     if not session.get("logged_in"):
+#         return jsonify({"error": "Not logged in"}), 401
+#     data = request.get_json(silent=True)
+#     if not data:
+#         return jsonify({"answer": "No JSON payload received"}), 400
+#     question = data.get("question", "gpt-5")
+#     llm_model = data.get("llm")
+#     context = data.get("context")
+#     if question:
+#         try:
+#             prompt = "You are an expert in art and medicine. Use the following images to answer:"
+#             context_paths = context.strip().splitlines()
+#             if llm_model == "gpt-5":
+#                 resp = ask_openai_llm(question, context_paths, prompt)
+#             else:
+#                 resp = ask_anthropic_llm(question, context_paths, prompt)
+#             return jsonify({"response": resp})
+#         except Exception as e:
+#             print(e)
+#             return jsonify({"response": "Model failed to run!"})
+#     else:
+#         return jsonify({"response": "No question received"}), 400
+
+@app.route('/generate_program', methods=['POST'])
+def generate_program():
     if not session.get("logged_in"):
         return jsonify({"error": "Not logged in"}), 401
+
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"answer": "No JSON payload received"}), 400
-    question = data.get("question", "gpt-5")
-    llm_model = data.get("llm")
-    context = data.get("context")
-    if question:
-        try:
-            prompt = "You are an expert in art and medicine. Use the following images to answer:"
-            context_paths = context.strip().splitlines()
-            if llm_model == "gpt-5":
-                resp = ask_openai_llm(question, context_paths, prompt)
-            else:
-                resp = ask_anthropic_llm(question, context_paths, prompt)
-            return jsonify({"response": resp})
-        except Exception as e:
-            print(e)
-            return jsonify({"response": "Model failed to run!"})
-    else:
-        return jsonify({"response": "No question received"}), 400
+        return jsonify({"error": "No JSON payload received"}), 400
 
+    print(data)
+    num_days = data.get("num_days", 3)
+    theme = data.get("theme", "")
+    audience = data.get("audience", "")
+    context = data.get("context")
+    llm_model = data.get("llm")
+
+    if not theme or not audience:
+        return jsonify({"error": "Missing theme or audience"}), 400
+
+    try:
+        logger.info("Generating program...")
+        context_paths = context.strip().splitlines()
+        # Build the instruction prompt
+        prompt_template = """
+Using the selected set of images as educational and illustrative material,
+create a nicely formatted 500-word programme for a {NUM_DAYS}-day workshop on art in
+medicine with the theme "{THEME}" aimed at {AUDIENCE}.
+The cross-cutting topics discussed in this workshop should prioritize commonalities between
+the artists who created these works as well as the overlap in medical/historical/artistic
+themes of their artifacts. Create the programme in the style of an academic syllabus,
+introducing each day with a short overview and learning objectives, and specifying the
+educational goals for each session and the artworks and corresponding themes that are explored.
+Provide response in HTML, but do not mention the HTML or instructions in the content.
+""".strip()
+        prompt = prompt_template.format(NUM_DAYS=num_days, THEME=theme, AUDIENCE=audience)
+
+        if llm_model == "gpt-5":
+            llm_resp = ask_openai_llm("", context_paths, prompt)
+        else:
+            llm_resp = ask_anthropic_llm("", context_paths, prompt)
+
+        return jsonify({"response": llm_resp})
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Model failed to run!", "details": str(e)}), 500
 
 @app.route('/session')
 def session_status():

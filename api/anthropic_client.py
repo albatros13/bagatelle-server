@@ -90,7 +90,7 @@ def ask_anthropic_llm(question, image_paths, prompt, model="claude-sonnet-4-2025
     try:
         response = llm_client.messages.create(
             model=model,
-            max_tokens=1024,
+            max_tokens=4000,
             messages=[{"role": "user", "content": content}],
         )
 

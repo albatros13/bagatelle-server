@@ -36,16 +36,18 @@ function updateSelected(selectedImages, updateCheckboxes = true) {
     });
 }
 
-
+// Create a relative path given a file name
 function getImagePath(fileName) {
     return "./static/data/images/" + fileName;
 }
 
+// Get file name from relative or full path
 function getFileName(src) {
     const parts = src.split(/[\\/]/);
     return parts[parts.length - 1];
 }
 
+// Get checkbox name to locate relevant checkboxes per image file
 function getCheckboxName(src) {
     return "chb_" + getFileName(src).replace(/[^a-zA-Z0-9]/g, "_");
 }
@@ -284,7 +286,11 @@ async function submitSearchRequest(ev) {
             throw new Error('Server response is not a JSON array of image URLs/paths.');
         }
 
-        selectedImages = new Set(data.map(x => getFileName(x)));
+        // selectedImages = new Set(data.map(x => getFileName(x)));
+        data.forEach(item => {
+            const fname = getFileName(item);
+            selectedImages.add(fname);
+        });
         updateSelected(selectedImages);
 
         retrieveStatus.textContent = `Retrieved ${data.length} images.`;
@@ -329,6 +335,124 @@ async function submitLLMQuestion(event) {
     }
 }
 
+// Workshop form submission: collect params + selected images and call server LLM
+async function submitWorkshopForm(ev) {
+    ev.preventDefault();
+    const statusEl = document.getElementById('workshop-status');
+
+    const numDaysInput = document.getElementById('num-days');
+    const themeInput = document.getElementById('theme');
+    const audienceInput = document.getElementById('audience');
+
+    const num_days = Math.max(1, Math.min(30, parseInt(numDaysInput.value || 3, 10)));
+    const theme = (themeInput.value || "").trim();
+    const audience = (audienceInput.value || "").trim();
+    const llm_model = document.querySelector('input[name="llm_model"]:checked').value;
+
+    if (!theme) {
+        alert("Please provide a theme for the workshop.");
+        return;
+    }
+    if (!audience) {
+        alert("Please provide a target audience.");
+        return;
+    }
+
+    // const llm_model = document.querySelector('input[name="llm_model"]:checked').value;
+    const imagesArray = [...selectedImages].map(x => getImagePath(x));
+    if (imagesArray.length === 0) {
+        if (!confirm("No images selected. Generate programme without images?")) {
+            return;
+        }
+    }
+
+    let context = imagesArray.join('\n');
+
+    statusEl.textContent = "Generating programme — please wait...";
+    const content = document.getElementById('workshop-result-content');
+    const btn = document.getElementById('workshop-submit');
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch("/generate_program", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "Accept": "application/json"},
+            body: JSON.stringify({
+                num_days: num_days,
+                theme: theme,
+                audience: audience,
+                context: context,
+                llm: llm_model
+            })
+        });
+
+        if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(`Server returned ${resp.status}: ${txt}`);
+        }
+
+        const data = await resp.json();
+        const programText = data["response"] || data["program"] || JSON.stringify(data);
+
+        statusEl.textContent = "Programme generated.";
+        showWorkshopProgram(programText.replace());
+    } catch (err) {
+        console.error(err);
+        statusEl.textContent = `Error: ${err.message || err}`;
+        content.innerHTML = "";
+        alert("Failed to generate programme. See console for details.");
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// Call this after receiving `programText` from the server
+function showWorkshopProgram(htmlBody) {
+    const toolbar = document.getElementById('workshop-result-toolbar');
+    const content = document.getElementById('workshop-result-content');
+    const downloadBtn = document.getElementById('workshop-download');
+    const clearBtn = document.getElementById('workshop-clear');
+
+    if (!content) {
+        console.error('showWorkshopProgram: element #workshop-result-content not found in DOM. Make sure gallery HTML is inserted and initialization ran after insertion.');
+        return;
+    }
+
+    if (!htmlBody || htmlBody.trim().length === 0) {
+        toolbar.style.display = 'none';
+        content.innerHTML = "";
+        return;
+    }
+
+    content.innerHTML = htmlBody;
+
+    // Show toolbar and wire the download button
+    toolbar.style.display = 'flex';
+
+    // Prepare an HTML file for download when the button is clicked
+    downloadBtn.onclick = () => {
+        const filename = `workshop_program_${new Date().toISOString().replace(/[:.]/g, "-")}.html`;
+        const blob = new Blob([htmlBody], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    clearBtn.onclick = () => {
+         content.innerHTML = "";
+         toolbar.style.display = 'none';
+         const themeInput = document.getElementById('theme');
+         themeInput.value = "";
+         const audienceInput = document.getElementById('audience');
+         audienceInput.value = "";
+    };
+}
+
 // Global definitions and controls
 
 const retrieveStatus = document.getElementById('retrieve-status');
@@ -339,8 +463,10 @@ let selectedImages = new Set();
 document.getElementById('llm-checkbox').addEventListener('change', updateLlmRadios);
 document.getElementById("update-button").addEventListener("click", updateImages);
 document.getElementById('retrieve-form').addEventListener('submit', submitSearchRequest);
-document.getElementById("rag-chat-form").addEventListener("submit", submitLLMQuestion);
 document.getElementById('slider').addEventListener('input', sliderControl);
+document.getElementById('workshop-form').addEventListener('submit', submitWorkshopForm);
+
+// document.getElementById("rag-chat-form").addEventListener("submit", submitLLMQuestion);
 
 const settingContainer = document.getElementById("settings-container");
 settingContainer.style.marginRight = "20px";

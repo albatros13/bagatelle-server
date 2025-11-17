@@ -100,3 +100,20 @@ def query_image_and_text_collection(question, top_k=5, text_weight=0.5, image_we
             combined[img_path] = {"point": [r], "score": r.score * image_weight}
     sorted_results = sorted(combined.values(), key=lambda x: x["score"], reverse=True)
     return prepare_response(question, top_k, sorted_results)
+
+
+def generate_curiculum():
+    prompt="""
+    Using the selected set of images as educational and illustrative material, 
+    create a nicely formatted 500-word programme for a [NUM OF DAYS]-day workshop on art in 
+    medicine with the theme “[THEME OF WORKSHOP]” aimed at [TYPE OF AUDIENCE]. 
+    The cross-cutting topics discussed in this workshop should prioritize commonalities between 
+    the artists who created these works as well as the overlap in medical/historical/artistic 
+    themes of their artifacts. Create the programme in the style of an academic syllabus, 
+    introducing each day with a short overview and learning objectives, and specifying the 
+    educational goals for each session and the artworks and corresponding themes that are explored.   
+    """
+
+    sample = """
+    Using the selected set of images as educational and illustrative material, create a nicely formatted 500-word programme for a 3-day workshop on art in medicine with the theme “Taking Flight” aimed at pathohistology residents. The cross-cutting topics discussed in this workshop should prioritize commonalities between the artists who created these works as well as the overlap in medical/historical/artistic themes of their artifacts. Create the programme in the style of an academic syllabus, introducing each day with a short overview and learning objectives, and specifying the educational goals for each session and the artworks and corresponding themes that are explored.   
+    """
