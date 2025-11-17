@@ -18,5 +18,6 @@ def get_remote_client():
     return QdrantClient(
         url=QDRANT_URL,
         api_key=QDRANT_API_KEY,
+        check_compatibility=False,
         https=True
 )
