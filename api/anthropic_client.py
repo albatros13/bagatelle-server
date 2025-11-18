@@ -92,6 +92,7 @@ def ask_anthropic_llm(question, image_paths, prompt, model="claude-sonnet-4-2025
             model=model,
             max_tokens=4000,
             messages=[{"role": "user", "content": content}],
+            timeout=120
         )
 
         # Extract text blocks from response
@@ -135,6 +136,7 @@ def ask_anthropic_llm_html(question, html_paths, prompt, model="claude-sonnet-4-
             model=model,
             max_tokens=4000,
             messages=[{"role": "user", "content": content_blocks}],
+            timeout=120
         )
 
         # Extract only text blocks from the output

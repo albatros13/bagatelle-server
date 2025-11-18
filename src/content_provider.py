@@ -51,7 +51,7 @@ def get_html_content(html_paths: str):
             print(f"⚠️ File not found: {path}")
             continue
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
             html = f.read()
 
         soup = BeautifulSoup(html, "html.parser")
