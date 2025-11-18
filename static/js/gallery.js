@@ -366,6 +366,11 @@ async function submitWorkshopForm(ev) {
         }
     }
 
+    if (imagesArray.length > 6) {
+        alert("Please reduce the number of images, the service can process up to 6 images in one call.");
+        return;
+    }
+
     let context = imagesArray.join('\n');
 
     statusEl.textContent = "Generating programme — please wait...";
@@ -407,7 +412,7 @@ async function submitWorkshopForm(ev) {
 }
 
 // Call this after receiving `programText` from the server
-function showWorkshopProgram(htmlBody) {
+function showWorkshopProgram(responseText) {
     const toolbar = document.getElementById('workshop-result-toolbar');
     const content = document.getElementById('workshop-result-content');
     const downloadBtn = document.getElementById('workshop-download');
@@ -417,6 +422,16 @@ function showWorkshopProgram(htmlBody) {
         console.error('showWorkshopProgram: element #workshop-result-content not found in DOM. Make sure gallery HTML is inserted and initialization ran after insertion.');
         return;
     }
+
+    function extractHTML(responseText) {
+      const htmlMatch = responseText.match(/```html\n?([\s\S]*?)```/i);
+      if (htmlMatch) {
+        return htmlMatch[1].trim();
+      }
+      return responseText.trim();
+    }
+
+    let htmlBody = extractHTML(responseText);
 
     if (!htmlBody || htmlBody.trim().length === 0) {
         toolbar.style.display = 'none';

@@ -212,7 +212,8 @@ the artists who created these works as well as the overlap in medical/historical
 themes of their artifacts. Create the programme in the style of an academic syllabus,
 introducing each day with a short overview and learning objectives, and specifying the
 educational goals for each session and the artworks and corresponding themes that are explored.
-Provide response in HTML, but do not mention the HTML or instructions in the content.
+Mention the artworks by name in the programme and explicitly point out in which sessions they will be discussed and why. 
+Provide response in HTML format. Do not refer to instructions or ask questions in response.
 """.strip()
         prompt = prompt_template.format(NUM_DAYS=num_days, THEME=theme, AUDIENCE=audience)
 
