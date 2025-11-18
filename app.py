@@ -5,8 +5,8 @@ from datetime import timedelta
 from flask_toastr import Toastr
 from src.qdrant_bagatelle_store_client import (
     query_image_collection, query_text_collection, query_image_and_text_collection)
-from api.openai_client import ask_openai_llm
-from api.anthropic_client import ask_anthropic_llm
+from api.openai_client import ask_openai_llm, ask_openai_llm_html
+from api.anthropic_client import ask_anthropic_llm, ask_anthropic_llm_html
 import os
 import logging
 from dotenv import load_dotenv
@@ -154,32 +154,6 @@ def retrieve():
             return jsonify({"response": image_paths, "error": "Model failed to run!"})
     return jsonify({"response": image_paths, "error": "Invalid request!"})
 
-
-# @app.route('/ask_llm', methods=['POST'])
-# def ask_llm():
-#     if not session.get("logged_in"):
-#         return jsonify({"error": "Not logged in"}), 401
-#     data = request.get_json(silent=True)
-#     if not data:
-#         return jsonify({"answer": "No JSON payload received"}), 400
-#     question = data.get("question", "gpt-5")
-#     llm_model = data.get("llm")
-#     context = data.get("context")
-#     if question:
-#         try:
-#             prompt = "You are an expert in art and medicine. Use the following images to answer:"
-#             context_paths = context.strip().splitlines()
-#             if llm_model == "gpt-5":
-#                 resp = ask_openai_llm(question, context_paths, prompt)
-#             else:
-#                 resp = ask_anthropic_llm(question, context_paths, prompt)
-#             return jsonify({"response": resp})
-#         except Exception as e:
-#             print(e)
-#             return jsonify({"response": "Model failed to run!"})
-#     else:
-#         return jsonify({"response": "No question received"}), 400
-
 @app.route('/generate_program', methods=['POST'])
 def generate_program():
     if not session.get("logged_in"):
@@ -195,6 +169,7 @@ def generate_program():
     audience = data.get("audience", "")
     context = data.get("context")
     llm_model = data.get("llm")
+    context_type = data.get("context_type")
 
     if not theme or not audience:
         return jsonify({"error": "Missing theme or audience"}), 400
@@ -204,7 +179,7 @@ def generate_program():
         context_paths = context.strip().splitlines()
         # Build the instruction prompt
         prompt_template = """
-Using only the selected set of images as educational and illustrative material,
+Using only the provided context as educational and illustrative material,
 create a nicely formatted 500-word programme for a {NUM_DAYS}-day workshop on art in
 medicine with the theme "{THEME}" aimed at {AUDIENCE}.
 The cross-cutting topics discussed in this workshop should prioritize commonalities between
@@ -216,13 +191,18 @@ Mention the artworks by name in the programme and explicitly point out in which 
 Provide response in HTML format. Do not refer to instructions or ask questions in response.
 """.strip()
         prompt = prompt_template.format(NUM_DAYS=num_days, THEME=theme, AUDIENCE=audience)
-
-        if llm_model == "gpt-5":
-            llm_resp = ask_openai_llm("", context_paths, prompt)
+        content = prompt
+        if context_type == "images":
+            if llm_model == "gpt-5":
+                llm_resp = ask_openai_llm("", context_paths, prompt)
+            else:
+                llm_resp = ask_anthropic_llm("", context_paths, prompt)
         else:
-            llm_resp = ask_anthropic_llm("", context_paths, prompt)
-
-        return jsonify({"response": llm_resp})
+            if llm_model == "gpt-5":
+                llm_resp = ask_openai_llm_html("", context_paths, prompt)
+            else:
+                llm_resp = ask_anthropic_llm_html("", context_paths, prompt)
+        return jsonify({"response": llm_resp, "content": content})
     except Exception as e:
         print(e)
         return jsonify({"error": "Model failed to run!", "details": str(e)}), 500

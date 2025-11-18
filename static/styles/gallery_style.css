@@ -13,7 +13,7 @@
   display: flex;
   flex-wrap: wrap;            /* Wrap to new lines */
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
@@ -114,8 +114,8 @@ figure {
     position: relative;
     text-align: center;
     border: 1px dotted gray;
-    padding: 5px;
-    margin: 5px;
+    padding: 4px;
+    margin: 2px;
 }
 
 figure img {

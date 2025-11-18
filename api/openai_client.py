@@ -1,7 +1,7 @@
 import os
 from openai import OpenAI
 import logging
-from src.image_provider import get_images, encode_image
+from src.content_provider import get_full_paths, get_html_content, encode_image
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def get_image_description_from_file(image_path, question, model="gpt-5"):
 
 
 def ask_openai_llm(question, image_paths, prompt, model="gpt-5"):
-    full_paths = get_images(image_paths)
+    full_paths = get_full_paths(image_paths)
     if not full_paths:
         return "Error: No images could be loaded. Please check the image paths."
 
@@ -75,6 +75,48 @@ def ask_openai_llm(question, image_paths, prompt, model="gpt-5"):
             ]
         )
         return resp.choices[0].message.content
+    except Exception as e:
+        print(f"⚠️ LLM request failed: {e}")
+        return "LLM request failed: service temporarily unavailable or timed out"
+
+
+def ask_openai_llm_html(question, html_paths, prompt, model="gpt-5"):
+    if not html_paths:
+        return "Error: No HTML paths provided."
+
+    html_pages = get_html_content(html_paths)
+
+    # Build message content
+    content_blocks = [{"type": "text", "text": prompt}]
+
+    # Add each HTML page as its own text block
+    for i, html in enumerate(html_pages, start=1):
+        content_blocks.append({
+            "type": "text",
+            "text": f"HTML Page {i}:\n{html}"
+        })
+
+    # Add the question at the end
+    content_blocks.append({
+        "type": "text",
+        "text": f"Question: {question}"
+    })
+
+    try:
+        resp = llm_client.chat.completions.create(
+            model=model,
+            timeout=120,
+            messages=[
+                {
+                    "role": "user",
+                    "content": content_blocks
+                }
+            ]
+        )
+        # content = '\n'.join(content_blocks)
+        # print("Prompt", content)
+        return resp.choices[0].message.content
+
     except Exception as e:
         print(f"⚠️ LLM request failed: {e}")
         return "LLM request failed: service temporarily unavailable or timed out"

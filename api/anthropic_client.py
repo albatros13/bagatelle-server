@@ -2,7 +2,7 @@ import base64
 import os
 from anthropic import Anthropic
 import logging
-from src.image_provider import get_images, encode_image_with_type
+from src.content_provider import get_full_paths, encode_image_with_type, get_html_content
 from anthropic import APIError
 
 
@@ -63,7 +63,7 @@ def get_image_description_from_file(image_path, question="Describe this image", 
 
 
 def ask_anthropic_llm(question, image_paths, prompt, model="claude-sonnet-4-20250514"):
-    full_paths = get_images(image_paths)
+    full_paths = get_full_paths(image_paths)
     if not full_paths:
         return "Error: No images could be loaded. Please check the image paths."
 
@@ -98,6 +98,52 @@ def ask_anthropic_llm(question, image_paths, prompt, model="claude-sonnet-4-2025
         return "".join(
             block.text for block in response.content if block.type == "text"
         )
+
+    except APIError as e:
+        print(f"⚠️ Anthropic API error: {e}")
+        return "LLM request failed due to an Anthropic API error."
+
+    except Exception as e:
+        print(f"⚠️ Unexpected error in Claude request: {e}")
+        return "LLM request failed: service temporarily unavailable or timed out."
+
+
+def ask_anthropic_llm_html(question, html_paths, prompt, model="claude-sonnet-4-20250514"):
+    if not html_paths:
+        return "Error: No HTML paths provided."
+
+    html_pages = get_html_content(html_paths)
+
+    # Build content blocks for Claude API
+    content_blocks = [
+        {"type": "text", "text": prompt},
+    ]
+
+    # Add HTML page text blocks
+    for i, html in enumerate(html_pages, start=1):
+        content_blocks.append({
+            "type": "text",
+            "text": f"HTML Page {i}:\n{html}"
+        })
+
+    # Add user question
+    content_blocks.append({"type": "text", "text": f"Question: {question}"})
+
+    # Call Anthropic API
+    try:
+        response = llm_client.messages.create(
+            model=model,
+            max_tokens=4000,
+            messages=[{"role": "user", "content": content_blocks}],
+        )
+
+        # Extract only text blocks from the output
+        resp = "".join(
+            block.text for block in response.content if block.type == "text"
+        )
+        # content = '\n'.join(content_blocks)
+        # print("Prompt", content)
+        return resp
 
     except APIError as e:
         print(f"⚠️ Anthropic API error: {e}")

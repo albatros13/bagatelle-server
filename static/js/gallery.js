@@ -44,6 +44,10 @@ function getImagePath(fileName) {
     return "./static/data/images/" + fileName;
 }
 
+function getHTMLPath(fileName){
+    return "./static/data/html_claude-sonnet-4/" + fileName.replace(/\.[^/.]+$/, ".html");
+}
+
 // Get file name from relative or full path
 function getFileName(src) {
     const parts = src.split(/[\\/]/);
@@ -306,38 +310,6 @@ async function submitSearchRequest(ev) {
     }
 }
 
-// Submit a question to a selected LLM about selected images
-async function submitLLMQuestion(event) {
-    event.preventDefault();
-
-    const userInput = document.getElementById("rag-user-input");
-    const question = userInput.value.trim();
-    if (!question) return;
-    addMessageToRagChat("user", question);
-    userInput.value = "";
-
-    const llm_model = document.querySelector('input[name="llm_model"]:checked').value;
-
-    let context = [...selectedImages].map(x => getImagePath(x)).join('\n');
-
-    // Send the question to the Flask backend
-    const response = await fetch("/ask_llm", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({question: question, context: context, llm: llm_model}),
-    });
-
-    let res = await response.text()
-    try {
-        const result = JSON.parse(res)
-        addMessageToRagChat("system", result.response);
-    } catch (error) {
-        addMessageToRagChat("system", res);
-    }
-}
-
 // Workshop form submission: collect params + selected images and call server LLM
 async function submitWorkshopForm(ev) {
     ev.preventDefault();
@@ -362,7 +334,7 @@ async function submitWorkshopForm(ev) {
     }
 
     // const llm_model = document.querySelector('input[name="llm_model"]:checked').value;
-    const imagesArray = [...selectedImages].map(x => getImagePath(x));
+    const imagesArray = [...selectedImages]
     if (imagesArray.length === 0) {
         if (!confirm("No images selected. Generate programme without images?")) {
             return;
@@ -374,7 +346,10 @@ async function submitWorkshopForm(ev) {
         return;
     }
 
-    let context = imagesArray.join('\n');
+    const context_type = document.querySelector('input[name="context"]:checked').value;
+
+    const context = context_type === "images"? [...selectedImages].map(x => getImagePath(x)).join('\n')
+        : [...selectedImages].map(x => getHTMLPath(x)).join('\n')
 
     statusEl.textContent = "Generating programme — please wait...";
     const content = document.getElementById('workshop-result-content');
@@ -389,6 +364,7 @@ async function submitWorkshopForm(ev) {
                 num_days: num_days,
                 theme: theme,
                 audience: audience,
+                context_type: context_type,
                 context: context,
                 llm: llm_model
             })
@@ -400,10 +376,11 @@ async function submitWorkshopForm(ev) {
         }
 
         const data = await resp.json();
-        const programText = data["response"] || data["program"] || JSON.stringify(data);
+        const programText = data["response"] || JSON.stringify(data);
+        const prompt = data["prompt"] || "?"
 
         statusEl.textContent = "Programme generated.";
-        showWorkshopProgram(programText.replace());
+        showWorkshopProgram(programText, prompt);
     } catch (err) {
         console.error(err);
         statusEl.textContent = `Error: ${err.message || err}`;
@@ -415,13 +392,14 @@ async function submitWorkshopForm(ev) {
 }
 
 // Call this after receiving `programText` from the server
-function showWorkshopProgram(responseText) {
-    const workshopToolbar = document.getElementById('workshop-result-toolbar');
-    const content = document.getElementById('workshop-result-content');
-    const downloadBtn = document.getElementById('workshop-download');
-    const clearBtn = document.getElementById('workshop-clear');
+function showWorkshopProgram(responseText, prompt) {
+    const wToolbar = document.getElementById('workshop-result-toolbar');
+    const wContent = document.getElementById('workshop-result-content');
+    const wDownloadBtn = document.getElementById('workshop-download');
+    const wClearBtn = document.getElementById('workshop-clear');
+    const wPromptDownloadBtn = document.getElementById('prompt-download');
 
-    if (!content) {
+    if (!wContent) {
         console.error('showWorkshopProgram: element #workshop-result-content not found in DOM. Make sure gallery HTML is inserted and initialization ran after insertion.');
         return;
     }
@@ -437,18 +415,18 @@ function showWorkshopProgram(responseText) {
     let htmlBody = extractHTML(responseText);
 
     if (!htmlBody || htmlBody.trim().length === 0) {
-        workshopToolbar.style.display = 'none';
-        content.innerHTML = "";
+        wToolbar.style.display = 'none';
+        wContent.innerHTML = "";
         return;
     }
 
-    content.innerHTML = htmlBody;
+    wContent.innerHTML = htmlBody;
 
     // Show toolbar and wire the download button
-    workshopToolbar.style.display = 'flex';
+    wToolbar.style.display = 'flex';
 
     // Prepare an HTML file for download when the button is clicked
-    downloadBtn.onclick = () => {
+    wDownloadBtn.onclick = () => {
         const filename = `workshop_program_${new Date().toISOString().replace(/[:.]/g, "-")}.html`;
         const blob = new Blob([htmlBody], { type: "text/html" });
         const url = URL.createObjectURL(blob);
@@ -461,9 +439,22 @@ function showWorkshopProgram(responseText) {
         URL.revokeObjectURL(url);
     };
 
-    clearBtn.onclick = () => {
-         content.innerHTML = "";
-         workshopToolbar.style.display = 'none';
+    wPromptDownloadBtn.onclick = () => {
+        const filename = `prompt_${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+        const blob = new Blob([prompt], { type: "text/txt" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    wClearBtn.onclick = () => {
+         wContent.innerHTML = "";
+         wToolbar.style.display = 'none';
          const themeInput = document.getElementById('theme');
          themeInput.value = "";
          const audienceInput = document.getElementById('audience');
@@ -481,6 +472,8 @@ function clearSelected(){
     selectedImages = new Set();
     const selectedContainer = document.getElementById("selected-image-container");
     selectedContainer.innerHTML = "";
+    const selectedToolbar = document.getElementById('selected-toolbar');
+    selectedToolbar.style.display = 'none';
 }
 
 // Global definitions and controls
