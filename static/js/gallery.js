@@ -10,10 +10,7 @@ function updateImages() {
         selectedCategories.includes(image.category)
     ) : [...images];
     displayImages(filteredImages);
-
-    selectedImages = new Set();
-    const selectedContainer = document.getElementById("selected-image-container");
-    selectedContainer.innerHTML = "";
+    clearSelected();
 }
 
 // Update visual block with selected images
@@ -34,6 +31,12 @@ function updateSelected(selectedImages, updateCheckboxes = true) {
             checkboxes.forEach(c => c.checked = true);
         }
     });
+    const selectedToolbar = document.getElementById('selected-toolbar');
+    if ([...selectedImages].length > 0){
+        selectedToolbar.style.display = 'flex';
+    } else {
+        selectedToolbar.style.display = 'none';
+    }
 }
 
 // Create a relative path given a file name
@@ -413,7 +416,7 @@ async function submitWorkshopForm(ev) {
 
 // Call this after receiving `programText` from the server
 function showWorkshopProgram(responseText) {
-    const toolbar = document.getElementById('workshop-result-toolbar');
+    const workshopToolbar = document.getElementById('workshop-result-toolbar');
     const content = document.getElementById('workshop-result-content');
     const downloadBtn = document.getElementById('workshop-download');
     const clearBtn = document.getElementById('workshop-clear');
@@ -434,7 +437,7 @@ function showWorkshopProgram(responseText) {
     let htmlBody = extractHTML(responseText);
 
     if (!htmlBody || htmlBody.trim().length === 0) {
-        toolbar.style.display = 'none';
+        workshopToolbar.style.display = 'none';
         content.innerHTML = "";
         return;
     }
@@ -442,7 +445,7 @@ function showWorkshopProgram(responseText) {
     content.innerHTML = htmlBody;
 
     // Show toolbar and wire the download button
-    toolbar.style.display = 'flex';
+    workshopToolbar.style.display = 'flex';
 
     // Prepare an HTML file for download when the button is clicked
     downloadBtn.onclick = () => {
@@ -460,12 +463,24 @@ function showWorkshopProgram(responseText) {
 
     clearBtn.onclick = () => {
          content.innerHTML = "";
-         toolbar.style.display = 'none';
+         workshopToolbar.style.display = 'none';
          const themeInput = document.getElementById('theme');
          themeInput.value = "";
          const audienceInput = document.getElementById('audience');
          audienceInput.value = "";
     };
+}
+
+function clearSelected(){
+     [...selectedImages].forEach(fileName => {
+        const src = getImagePath(fileName);
+        const chbName = getCheckboxName(src);
+        const checkboxes = document.querySelectorAll(`input[type="checkbox"][name=${chbName}`);
+        checkboxes.forEach(c => c.checked = false);
+    });
+    selectedImages = new Set();
+    const selectedContainer = document.getElementById("selected-image-container");
+    selectedContainer.innerHTML = "";
 }
 
 // Global definitions and controls
@@ -480,6 +495,7 @@ document.getElementById("update-button").addEventListener("click", updateImages)
 document.getElementById('retrieve-form').addEventListener('submit', submitSearchRequest);
 document.getElementById('slider').addEventListener('input', sliderControl);
 document.getElementById('workshop-form').addEventListener('submit', submitWorkshopForm);
+document.getElementById('selected-clear').onclick = clearSelected;
 
 // document.getElementById("rag-chat-form").addEventListener("submit", submitLLMQuestion);
 

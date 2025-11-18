@@ -204,7 +204,7 @@ def generate_program():
         context_paths = context.strip().splitlines()
         # Build the instruction prompt
         prompt_template = """
-Using the selected set of images as educational and illustrative material,
+Using only the selected set of images as educational and illustrative material,
 create a nicely formatted 500-word programme for a {NUM_DAYS}-day workshop on art in
 medicine with the theme "{THEME}" aimed at {AUDIENCE}.
 The cross-cutting topics discussed in this workshop should prioritize commonalities between
