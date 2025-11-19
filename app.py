@@ -179,16 +179,19 @@ def generate_program():
         context_paths = context.strip().splitlines()
         # Build the instruction prompt
         prompt_template = """
-Using only the provided context as educational and illustrative material,
-create a nicely formatted 500-word programme for a {NUM_DAYS}-day workshop on art in
-medicine with the theme "{THEME}" aimed at {AUDIENCE}.
-The cross-cutting topics discussed in this workshop should prioritize commonalities between
-the artists who created these works as well as the overlap in medical/historical/artistic
-themes of their artifacts. Create the programme in the style of an academic syllabus,
-introducing each day with a short overview and learning objectives, and specifying the
-educational goals for each session and the artworks and corresponding themes that are explored.
-Mention the artworks by name in the programme and explicitly point out in which sessions they will be discussed and why. 
-Provide response in HTML format. Do not refer to instructions or ask questions in response.
+Using only the selected set of artworks as educational and illustrative material, create a nicely formatted 500-word programme 
+for a [NUM OF DAYS]-day workshop on art in medicine with the theme “[THEME OF WORKSHOP]” aimed at [TYPE OF AUDIENCE]. 
+The cross-cutting topics discussed in this workshop should prioritize commonalities between the artists who created these 
+works as well as the overlap in medical/historical/artistic aspects of their artifacts. Before you describe the workshop 
+programme in any detail, first provide a 100-word introduction that explains why the chosen theme of the art-in-medicine
+ workshop is relevant to the type of audience the workshop is aimed at, and why the selected artworks provide very apt 
+ and fitting case-studies for the theme of the workshop. Create a programme that is focused on the chosen theme, in the
+  style of an academic syllabus, introducing each day with a short overview and set of learning objectives, 
+  and specifying the educational goals for each session and the artworks and corresponding topics that are explored. 
+  Please make sure that each workshop day has sessions covering the typical 9am-to-5pm span (with appropriate breaks for
+   coffee, lunch etc) - also propose break-out sessions for small-group discussions that combine the chosen artworks and
+    workshop theme. In the programme, mention the artworks by name and explicitly point out in which sessions they will 
+    be discussed and why. Provide response in HTML format. Do not refer to instructions or ask questions in response.
 """.strip()
         prompt = prompt_template.format(NUM_DAYS=num_days, THEME=theme, AUDIENCE=audience)
         content = prompt
