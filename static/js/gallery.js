@@ -310,6 +310,13 @@ async function submitSearchRequest(ev) {
     }
 }
 
+function setWorkshopFormDisabled(disabled) {
+    const form = document.getElementById('workshop-form');
+    if (!form) return;
+    const controls = form.querySelectorAll('input, select, textarea, button');
+    controls.forEach(el => el.disabled = disabled);
+}
+
 // Workshop form submission: collect params + selected images and call server LLM
 async function submitWorkshopForm(ev) {
     ev.preventDefault();
@@ -346,15 +353,15 @@ async function submitWorkshopForm(ev) {
         return;
     }
 
-    const context_type = document.querySelector('input[name="context"]:checked').value;
+    // const context_type = document.querySelector('input[name="context"]:checked').value;
+    const context_type="write-ups"; 
 
     const context = context_type === "images"? [...selectedImages].map(x => getImagePath(x)).join('\n')
         : [...selectedImages].map(x => getHTMLPath(x)).join('\n')
 
     statusEl.textContent = "Generating programme — please wait...";
     const content = document.getElementById('workshop-result-content');
-    const btn = document.getElementById('workshop-submit');
-    btn.disabled = true;
+    setWorkshopFormDisabled(true);
 
     try {
         const resp = await fetch("/generate_program", {
@@ -386,8 +393,8 @@ async function submitWorkshopForm(ev) {
         statusEl.textContent = `Error: ${err.message || err}`;
         content.innerHTML = "";
         alert("Failed to generate programme. See console for details.");
-    } finally {
-        btn.disabled = false;
+        // Re-enable the form so the user can retry
+        setWorkshopFormDisabled(false);
     }
 }
 
@@ -417,6 +424,8 @@ function showWorkshopProgram(responseText, prompt) {
     if (!htmlBody || htmlBody.trim().length === 0) {
         wToolbar.style.display = 'none';
         wContent.innerHTML = "";
+        // Nothing to show; re-enable the form so user can try again
+        setWorkshopFormDisabled(false);
         return;
     }
 
@@ -439,17 +448,19 @@ function showWorkshopProgram(responseText, prompt) {
         URL.revokeObjectURL(url);
     };
 
-    wPromptDownloadBtn.onclick = () => {
-        const filename = `prompt_${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
-        const blob = new Blob([prompt], { type: "text/txt" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+    if (wPromptDownloadBtn) {
+        wPromptDownloadBtn.onclick = () => {
+            const filename = `prompt_${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+            const blob = new Blob([prompt], { type: "text/txt" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        };
     }
 
     wClearBtn.onclick = () => {
@@ -459,6 +470,10 @@ function showWorkshopProgram(responseText, prompt) {
          themeInput.value = "";
          const audienceInput = document.getElementById('audience');
          audienceInput.value = "";
+         // Re-enable the workshop form after clearing the result
+         setWorkshopFormDisabled(false);
+         const statusEl = document.getElementById('workshop-status');
+         if (statusEl) statusEl.textContent = "";
     };
 }
 

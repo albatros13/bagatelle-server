@@ -70,18 +70,18 @@
                 </label>
             </div>
         </label>
-        <label for="context-selector" style="display:flex; flex-direction:column; font-size:90%;">Context
-            <div class="radio-selector w3-border w3-padding">
-                <label>
-                    <input type="radio" name="context" value="write-ups" checked>
-                    write-ups
-                </label>
-                <label>
-                    <input type="radio" name="context" value="images">
-                    images
-                </label>
-            </div>
-        </label>
+{#        <label for="context-selector" style="display:flex; flex-direction:column; font-size:90%;">Context#}
+{#            <div class="radio-selector w3-border w3-padding">#}
+{#                <label>#}
+{#                    <input type="radio" name="context" value="write-ups" checked>#}
+{#                    write-ups#}
+{#                </label>#}
+{#                <label>#}
+{#                    <input type="radio" name="context" value="images">#}
+{#                    images#}
+{#                </label>#}
+{#            </div>#}
+{#        </label>#}
 
         <label for="num-days" style="display:flex; flex-direction:column; font-size:90%;">
             Num days
@@ -111,7 +111,6 @@
             <button id="workshop-download" class="w3-button w3-padding" >Download as
                 HTML
             </button>
-            <button id="prompt-download" class="w3-button w3-padding" >Download prompt</button>
             <button id="workshop-clear" class="w3-button w3-padding">Clear</button>
         </div>
         <!-- Formatted result area -->
@@ -125,7 +124,7 @@
 </section>
 
 <!-- Image catalogue -->
-<section class="w3-block w3-border w3-padding w3-margin">
+<section class="w3-container w3-border w3-padding w3-margin">
     <h3>Image catalogue: </h3>
     <div id="bagatelle-container">
         <div id="settings-container">
